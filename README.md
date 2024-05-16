@@ -17,15 +17,21 @@ This Python library (csa-ai-clean-json-output) provides a simple class to clean 
 Using this as a library:
 
 ```
-#!/usr/bin/env python3
 
-import csa_ai_clean_json_output
+from csa_ai_clean_json_output import clean_ai_json_output
 
-TODO: code example
+cleaner = clean_ai_json_output(input_source=input_string, input_type='string')
+cleaned_json = cleaner.process()
 ```
 
-Using this as a command line tool by calling it as a module:
+Using this as a command line tool by calling it one a file:
 
 ```
-python3 -m csa_ai_clean_json_output.csa_ai_clean_json_output --input file1 --output file2
+python csa_ai_clean_json_output.py --input input.json --output output.json --type file
+```
+
+Or on a string:
+
+```
+python csa_ai_clean_json_output.py --input '{"some":"json"}' --type string
 ```
