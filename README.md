@@ -1,5 +1,7 @@
 # Cloud Security Alliance AI Clean JSON Output
 
+This library is not yet packaged, this is planned but there appears to be an issue with my PyPi account.
+
 You can get this library at https://pypi.org/project/csa-ai-clean-json-output/ or via:
 
 ```
