@@ -3,6 +3,7 @@
 import json
 import argparse
 import re
+import os
 
 class CleanAIJsonOutput:
     def __init__(self, input_source=None, output_file=None, input_type='file'):
@@ -42,8 +43,8 @@ class CleanAIJsonOutput:
     def replace_smart_quotes(self, data):
         def replace_quotes(obj):
             if isinstance(obj, str):
-                obj = re.sub(r'[“”]', '"', obj)
-                obj = re.sub(r"[‘’]", "'", obj)
+                obj = obj.replace('“', '"').replace('”', '"')
+                obj = obj.replace('‘', "'").replace('’', "'")
             elif isinstance(obj, list):
                 obj = [replace_quotes(item) for item in obj]
             elif isinstance(obj, dict):
@@ -51,6 +52,10 @@ class CleanAIJsonOutput:
             return obj
 
         return replace_quotes(data)
+
+    def remove_comments(self, data):
+        pattern = re.compile(r'//.*?$|/\*.*?\*/|#.*?$', re.MULTILINE | re.DOTALL)
+        return re.sub(pattern, '', data)
 
     def remove_extra_at_start_of_file(self, raw_data):
         match = re.search(r'[{[]', raw_data)
@@ -75,9 +80,31 @@ class CleanAIJsonOutput:
                 return raw_data[:end_pos + 1]
         return raw_data
 
+    def fix_trailing_commas(self, data):
+        fixed_content = re.sub(r',(\s*[\]}])', r'\1', data)
+        return fixed_content
+
+    def fix_unescaped_quotes_in_string(self, string):
+        def replace(match):
+            return match.group(1) + '\\"' + match.group(2)
+        
+        pattern = re.compile(r'([^\\])"([^:,}\]]*[^\\])"')
+        return re.sub(pattern, replace, string)
+
+    def fix_unescaped_quotes_in_json(self, data):
+        if isinstance(data, dict):
+            return {key: self.fix_unescaped_quotes_in_json(value) for key, value in data.items()}
+        elif isinstance(data, list):
+            return [self.fix_unescaped_quotes_in_json(item) for item in data]
+        elif isinstance(data, str):
+            return self.fix_unescaped_quotes_in_string(data)
+        else:
+            return data
+
     def clean(self, data):
         data = self.replace_unicode_characters(data)
         data = self.replace_smart_quotes(data)
+        data = self.fix_unescaped_quotes_in_json(data)
         return data
 
     def process(self):
@@ -89,12 +116,24 @@ class CleanAIJsonOutput:
         else:
             raise ValueError("Invalid input type. Must be 'file' or 'string'.")
 
-        if not self.is_valid_json(raw_data):
-            raw_data = self.remove_extra_at_start_of_file(raw_data)
-            raw_data = self.remove_extra_at_end_of_file(raw_data)
+        # Normalize line breaks to Unix style
+        raw_data = raw_data.replace('\r\n', '\n').replace('\r', '\n')
 
-            if not self.is_valid_json(raw_data):
-                raise ValueError("Invalid JSON in input data.")
+        # Remove comments
+        raw_data = self.remove_comments(raw_data)
+
+        # Fix smart quotes before other processing
+        raw_data = self.replace_smart_quotes(raw_data)
+
+        # Remove extra characters at the start and end of the file
+        raw_data = self.remove_extra_at_start_of_file(raw_data)
+        raw_data = self.remove_extra_at_end_of_file(raw_data)
+
+        # Fix trailing commas
+        raw_data = self.fix_trailing_commas(raw_data)
+
+        if not self.is_valid_json(raw_data):
+            raise ValueError("Invalid JSON in input data.")
 
         data = json.loads(raw_data)
         cleaned_data = self.clean(data)

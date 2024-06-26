@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "csa_ai_clean_json_output"
-version = "0.0.3"
+version = "0.0.4"
 authors = [
   { name="Kurt Seifried", email="kseifried@cloudsecurityalliance.org" },
 ]
